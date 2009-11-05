@@ -160,6 +160,7 @@ class UniversalMachine(program: Array[Int]) {
 	    //Console.withOut(Console.err)(println("\n"))
 	    //*/
 
+
 	    counter += 1
 	}
 	val time: Float = (System.currentTimeMillis - start) / 1000.0f

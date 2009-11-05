@@ -35,14 +35,14 @@ object UM {
 	    program(word) |= (bytes(offset + 2) << 8) & 0x0000ff00
 	    program(word) |= bytes(offset + 3) & 0x000000ff
 
-	    if (word == 0) {
-		Console.withOut(Console.err)(printf("Bytes: %2x, %2x, %2x, %2x\n Operator: %d (%08x)\n\n", bytes(offset), bytes(offset + 1), bytes(offset + 2), bytes(offset + 3), program(word), program(word)))
-	    }
+	    //if (word == 0) {
+	    //	Console.withOut(Console.err)(printf("Bytes: %2x, %2x, %2x, %2x\n Operator: %d (%08x)\n\n", bytes(offset), bytes(offset + 1), bytes(offset + 2), bytes(offset + 3), program(word), program(word)))
+	   // }
 
 	    word += 1
 	}
 	
-	println(words)
+	Console.err.println("Initial program size: " + words + " words.")
 	return program
     }
 }
