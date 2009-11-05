@@ -103,6 +103,7 @@ class UniversalMachine(program: Array[Int]) {
     private def opLoadProgram(b: Int, c:Int) {
 	//Console.withOut(Console.err)(printf("Load program from array with identifier given in register %d (%08x) and start execution at offset given in register %d (%08x)\n\n", b, registers(b), c, registers(c)))
 	if (registers(b) != 0) {
+	    arrays(0) = arrays(registers(b))
 	    arrays(0) = new Array[Int](arrays(registers(b)).length)
 	    Array.copy(arrays(registers(b)), 0, arrays(0), 0, arrays(0).length)
 	}
@@ -123,9 +124,8 @@ class UniversalMachine(program: Array[Int]) {
     }
 
     def run() {
-	val resolution = 10000
-	var counter = 0
-	var start = System.currentTimeMillis
+	var counter: Long = 0
+	val start: Long = System.currentTimeMillis
 
 	while (isRunning) {
 	    val operator = arrays(0)(finger)
@@ -161,12 +161,8 @@ class UniversalMachine(program: Array[Int]) {
 	    //*/
 
 	    counter += 1
-	    if (System.currentTimeMillis - start > resolution) {
-		val perf = counter * 1000 / resolution
-		Console.withOut(Console.err)(printf("%d operations per second.\n", perf))
-		counter = 0
-		start = System.currentTimeMillis
-	    }
 	}
+	val time: Float = (System.currentTimeMillis - start) / 1000.0f
+	Console.err.printf("%f ops/sec on average\n", float2Float(counter / time))
     }
 }
