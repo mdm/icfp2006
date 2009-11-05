@@ -7,150 +7,91 @@ class UniversalMachine(program: Array[Int]) {
     private var finger: Int = 0
     private var isRunning: Boolean = true
 
+    //private val opCounts = new Array[Long](14)
+
     arrays(0) = program
 
-    private def opConditionalMove(a: Int, b: Int, c:Int) {
-	//Console.withOut(Console.err)(printf("Copy register %d (%08x) to register %d, if register %d (%08x) is not 0. \n\n", b, registers(b), a, c, registers(c)))
-	if (registers(c) != 0) registers(a) = registers(b)
-	finger += 1
-    }
-
-    private def opArrayIndex(a: Int, b: Int, c:Int) {
-	//Console.withOut(Console.err)(printf("Copy array location \"%08x[%08x]\" (%08x) to register %d\n\n", registers(b), registers(c), arrays(registers(b))(registers(c)), a))
-	registers(a) = arrays(registers(b))(registers(c))
-	finger += 1
-    }
-
-    private def opArrayAmendment(a: Int, b: Int, c:Int) {
-	//Console.withOut(Console.err)(printf("Copy register %d (%08x) to array location \"%08x[%08x]\"\n\n", c, registers(c), registers(b), registers(c)))
-	arrays(registers(a))(registers(b)) = registers(c)
-	finger += 1
-    }
-
-    private def opAddition(a: Int, b: Int, c:Int) {
-	//Console.withOut(Console.err)(printf("Add register %d (%08x) to register %d (%08x) and store the result (modulo 2^32) in register %d\n\n", b, registers(b), c, registers(c), a))
-	registers(a) = registers(b) + registers(c)
-	finger += 1
-    }
-
-    private def opMultiplication(a: Int, b: Int, c:Int) {
-	//Console.withOut(Console.err)(printf("Multiply register %d (%08x) with register %d (%08x) and store the result (modulo 2^32) in register %d\n\n", b, registers(b), c, registers(c), a))
-	registers(a) = registers(b) * registers(c)
-	finger += 1
-    }
-
-    private def opDivision(a: Int, b: Int, c:Int) {
-	//Console.withOut(Console.err)(printf("Divide register %d (%08x) by register %d (%08x) and store the result (modulo 2^32) in register %d\n\n", b, registers(b), c, registers(c), a))
-	if (registers(c) == 0) fail("ERROR: Division by zero.")
-	val unsigned_b = (registers(b).toLong << 32) >>> 32
-	val unsigned_c = (registers(c).toLong << 32) >>> 32
-	val result = unsigned_b / unsigned_c
-	registers(a) = result.toInt
-	//Console.withOut(Console.err)(printf("Result %d (%08x)\n\n", registers(a), registers(a)))
-	finger += 1
-    }
-
-    private def opNotAnd(a: Int, b: Int, c:Int) {
-	//Console.withOut(Console.err)(printf("Calculate \"register %d (%08x) NAND register %d (%08x)\" and store the result in register %d\n\n", b, registers(b), c, registers(c), a))
-	registers(a) = ~(registers(b) & registers(c))
-	finger += 1
-    }
-
-    private def opHalt() {
-	Console.withOut(Console.err)(printf("Halting the Universal Machine.\n\n"))
-	isRunning = false
-	finger += 1
-    }
-
-    private def opAllocation(b: Int, c:Int) {
-	//Console.withOut(Console.err)(printf("Allocate an array of the size given in register %d (%08x) and store its identifier in register %d\n\n", c, registers(c), b))
-	//Console.withOut(Console.err)(println(arrays.length))
-	if (freeList == Nil) {
-	    val box = new Array[Array[Int]](1)
-	    box(0) = new Array[Int](registers(c))
-	    registers(b) = arrays.length
-	    arrays = arrays ++ box
-	}
-	else {
-	    arrays(freeList.head) = new Array[Int](registers(c))
-	    registers(b) = freeList.head
-	    freeList = freeList.tail
-	}
-	//Console.withOut(Console.err)(printf("# allocated arrays: %d\n", arrays.length))
-	finger += 1
-    }
-
-    private def opAbandonment(c:Int) {
-	//Console.withOut(Console.err)(printf("Free array with the identifier given in register %d (%08x)\n\n", c, registers(c)))
-	arrays(registers(c)) = null
-	freeList = registers(c)::freeList
-	finger += 1
-    }
-
-    private def opOutput(c:Int) {
-	//Console.withOut(Console.err)(printf("Write character given in register %d (%08x) to the console\n\n", c, registers(c)))
-	if (c < 0 || c > 255) fail("ERROR: Illegal output.")
-	print(registers(c).toChar)
-	finger += 1
-    }
-
-    private def opInput(c:Int) {
-	//Console.withOut(Console.err)(printf("Read a character from the console and store it in register %d\n\n", c))
-	registers(c) = System.in.read
-	finger += 1
-    }
-
-    private def opLoadProgram(b: Int, c:Int) {
-	//Console.withOut(Console.err)(printf("Load program from array with identifier given in register %d (%08x) and start execution at offset given in register %d (%08x)\n\n", b, registers(b), c, registers(c)))
-	if (registers(b) != 0) {
-	    arrays(0) = new Array[Int](arrays(registers(b)).length)
-	    Array.copy(arrays(registers(b)), 0, arrays(0), 0, arrays(0).length)
-	}
-	finger = registers(c)
-	//Console.withOut(Console.err)(printf("Execution finger at: #%d (%08x)\n\n", finger, finger))
-    }
-
-    private def opOrthography(operator:Int) {
-	val a = (operator >> 25) & 7
-	registers(a) = operator & 0x01ffffff
-	//Console.withOut(Console.err)(printf("Store value \"%08x\" in register %d\n\n", registers(a), a))
-	finger += 1
-    }
-
     private def fail(error: String) {
-	println(error)
-	opHalt();
+	Console.err.println(error)
+	isRunning = false
     }
 
     def run() {
-	val resolution = 10000
-	var counter = 0
-	var start = System.currentTimeMillis
-
 	while (isRunning) {
 	    val operator = arrays(0)(finger)
 	    val opcode = operator >>> 28
 	    val a = (operator >> 6) & 7
 	    val b = (operator >> 3) & 7 
 	    val c = operator & 7
-
-	    //Console.withOut(Console.err)(printf("Operator #%d: %d (%08x)\nOpcode: %d, Registers: %d (%08x), %d (%08x), %d (%08x)\n", finger, operator, operator, opcode, a, registers(a), b, registers(b), c, registers(c)))
-	    
+	
+	    //opCounts(opcode) += 1
+	    //if (opCounts(opcode) == java.lang.Long.MAX_VALUE) isRunning = false
 	    opcode match {
-		case 0 => opConditionalMove(a, b, c)
-		case 1 => opArrayIndex(a, b, c)
-		case 2 => opArrayAmendment(a, b, c)
-		case 3 => opAddition(a, b, c)
-		case 4 => opMultiplication(a, b, c)
-		case 5 => opDivision(a, b, c)
-		case 6 => opNotAnd(a, b, c)
-		case 7 => opHalt()
-		case 8 => opAllocation(b, c)
-		case 9 => opAbandonment(c)
-		case 10 => opOutput(c)
-		case 11 => opInput(c)
-		case 12 => opLoadProgram(b, c)
-		case 13 => opOrthography(operator)
+		case 0 =>
+			if (registers(c) != 0) registers(a) = registers(b)
+			finger += 1
+		case 1 =>
+			registers(a) = arrays(registers(b))(registers(c))
+			finger += 1
+		case 2 =>
+			arrays(registers(a))(registers(b)) = registers(c)
+			finger += 1
+		case 3 =>
+			registers(a) = registers(b) + registers(c)
+			finger += 1
+		case 4 =>
+			registers(a) = registers(b) * registers(c)
+			finger += 1
+		case 5 =>
+			//Console.err.println("blub")
+			if (registers(c) == 0) fail("ERROR: Division by zero.")
+			val unsigned_b = (registers(b).toLong << 32) >>> 32
+			val unsigned_c = (registers(c).toLong << 32) >>> 32
+			val result = unsigned_b / unsigned_c
+			registers(a) = result.toInt
+			finger += 1
+		case 6 =>
+			registers(a) = ~(registers(b) & registers(c))
+			finger += 1
+		case 7 =>
+			Console.err.println("Halting the Universal Machine.\n")
+			isRunning = false
+			finger += 1
+		case 8 =>
+			if (freeList == Nil) {
+			    val box = new Array[Array[Int]](1)
+			    box(0) = new Array[Int](registers(c))
+			    registers(b) = arrays.length
+			    arrays = arrays ++ box
+			}
+			else {
+			    arrays(freeList.head) = new Array[Int](registers(c))
+			    registers(b) = freeList.head
+			    freeList = freeList.tail
+			}
+			finger += 1
+		case 9 =>
+			arrays(registers(c)) = null
+			freeList = registers(c)::freeList
+			finger += 1
+		case 10 =>
+			if (c < 0 || c > 255) fail("ERROR: Illegal output.")
+			System.out.write(registers(c))
+			System.out.flush
+			finger += 1
+		case 11 =>
+			registers(c) = System.in.read
+			finger += 1
+		case 12 =>
+			if (registers(b) != 0) {
+			    arrays(0) = new Array[Int](arrays(registers(b)).length)
+			    Array.copy(arrays(registers(b)), 0, arrays(0), 0, arrays(0).length)
+			}
+			finger = registers(c)
+		case 13 =>
+			val a2 = (operator >> 25) & 7
+			registers(a2) = operator & 0x01ffffff
+			finger += 1
 		case _ => fail("ERROR: Unkown operation.")
 	    }
 	    
@@ -159,14 +100,14 @@ class UniversalMachine(program: Array[Int]) {
 	    //}
 	    //Console.withOut(Console.err)(println("\n"))
 	    //*/
-
-	    counter += 1
-	    if (System.currentTimeMillis - start > resolution) {
-		val perf = counter * 1000 / resolution
-		Console.withOut(Console.err)(printf("%d operations per second.\n", perf))
-		counter = 0
-		start = System.currentTimeMillis
-	    }
 	}
+
+	//var i = 0
+	//while (i < 14) {
+		//Console.err.printf("Operation %d was executed %d times in %d ms.\n", i, opCounts(i), opTimes(i))
+	//	Console.err.print(i + ", ")
+	//	Console.err.println(opCounts(i))
+	//	i += 1
+	//}
     }
 }
