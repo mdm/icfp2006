@@ -119,10 +119,11 @@ fn run_program(program: Vec<u32>) {
             6 => registers[register_a] = !(registers[register_b] & registers[register_c]),
             7 => break,
             8 => {
-                let mut new_array = Vec::new();
-                for _ in 0..registers[register_c] {
-                    new_array.push(0);
-                }
+                // let mut new_array = Vec::with_capacity(registers[register_c] as usize);
+                // for _ in 0..registers[register_c] {
+                //     new_array.push(0);
+                // }
+                let new_array = vec![0_u32; registers[register_c] as usize];
                 match freelist.pop() {
                     Some(free_index) => {
                         heap[free_index] = Some(new_array);
