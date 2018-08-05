@@ -2,7 +2,9 @@ use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
+use std::num::Wrapping;
 use std::process;
+
 
 fn main() {
     let filename = parse_args(env::args()).unwrap_or_else(|err| {
@@ -79,6 +81,19 @@ fn run_program(program: Vec<u32>) {
         let register_b: usize = ((next_platter >> 3) & 7 as u32) as usize;
         let register_c: usize = (next_platter & 7 as u32) as usize;
 
+        // println!(
+        //     " DEBUG {}({}: {}, {}: {}, {}: {})@{} WITH {:?}",
+        //     operator, 
+        //     register_a,
+        //     registers[register_a],
+        //     register_b,
+        //     registers[register_b],
+        //     register_c,
+        //     registers[register_c],
+        //     finger,
+        //     registers
+        // );
+
         match operator {
             0 => if registers[register_c] != 0 {
                 registers[register_a] = registers[register_b]
@@ -98,21 +113,25 @@ fn run_program(program: Vec<u32>) {
                     None => panic!("Tried to write to invalid array. Halting!"),
                 }
             },
-            3 => registers[register_c] = registers[register_b] + registers[register_c],
-            4 => registers[register_c] = registers[register_b] * registers[register_c],
-            5 => registers[register_c] = registers[register_b] / registers[register_c],
-            6 => registers[register_c] = !(registers[register_b] & registers[register_c]),
+            3 => registers[register_a] = (Wrapping(registers[register_b]) + Wrapping(registers[register_c])).0,
+            4 => registers[register_a] = (Wrapping(registers[register_b]) * Wrapping(registers[register_c])).0,
+            5 => registers[register_a] = registers[register_b] / registers[register_c],
+            6 => registers[register_a] = !(registers[register_b] & registers[register_c]),
             7 => break,
             8 => {
+                let mut new_array = Vec::new();
+                for _ in 0..registers[register_c] {
+                    new_array.push(0);
+                }
                 match freelist.pop() {
                     Some(free_index) => {
-                        let mut new_array = Vec::new();
-                        for _ in 0..registers[register_c] {
-                            new_array.push(0);
-                        }
                         heap[free_index] = Some(new_array);
+                        registers[register_b] = free_index as u32;
                     },
-                    None => heap.push(Some(Vec::new())),
+                    None => {
+                        heap.push(Some(new_array));
+                        registers[register_b] = heap.len() as u32 - 1;
+                    },
                 }
             },
             9 => {
@@ -136,11 +155,14 @@ fn run_program(program: Vec<u32>) {
             13 => {
                 let register_a = ((next_platter >> 25) & 7 as u32) as usize;
                 registers[register_a] = next_platter & 0x1ffffff;
+                // println!("LOADING {} -> {}", registers[register_a], register_a);
             },
             _ => panic!("Invalid operator. Halting!"),
         }
 
-        finger += 1;
+        if operator != 12 {
+            finger += 1;
+        }
     }
 }
 
