@@ -81,19 +81,6 @@ fn run_program(program: Vec<u32>) {
         let register_b: usize = ((next_platter >> 3) & 7 as u32) as usize;
         let register_c: usize = (next_platter & 7 as u32) as usize;
 
-        // println!(
-        //     " DEBUG {}({}: {}, {}: {}, {}: {})@{} WITH {:?}",
-        //     operator, 
-        //     register_a,
-        //     registers[register_a],
-        //     register_b,
-        //     registers[register_b],
-        //     register_c,
-        //     registers[register_c],
-        //     finger,
-        //     registers
-        // );
-
         match operator {
             0 => if registers[register_c] != 0 {
                 registers[register_a] = registers[register_b]
@@ -119,10 +106,6 @@ fn run_program(program: Vec<u32>) {
             6 => registers[register_a] = !(registers[register_b] & registers[register_c]),
             7 => break,
             8 => {
-                // let mut new_array = Vec::with_capacity(registers[register_c] as usize);
-                // for _ in 0..registers[register_c] {
-                //     new_array.push(0);
-                // }
                 let new_array = vec![0_u32; registers[register_c] as usize];
                 match freelist.pop() {
                     Some(free_index) => {
@@ -140,11 +123,11 @@ fn run_program(program: Vec<u32>) {
                 freelist.push(registers[register_c] as usize);
             },
             10 => {
-                std::io::stdout().write(&[registers[register_c] as u8]).ok();
+                std::io::stdout().write(&[registers[register_c] as u8]).unwrap();
             },
             11 => {
                 let mut buffer: [u8; 1] = [0];
-                std::io::stdin().read(&mut buffer).ok();
+                std::io::stdin().read(&mut buffer).unwrap();
                 registers[register_c] = buffer[0] as u32;
             },
             12 => {
@@ -156,7 +139,6 @@ fn run_program(program: Vec<u32>) {
             13 => {
                 let register_a = ((next_platter >> 25) & 7 as u32) as usize;
                 registers[register_a] = next_platter & 0x1ffffff;
-                // println!("LOADING {} -> {}", registers[register_a], register_a);
             },
             _ => panic!("Invalid operator. Halting!"),
         }
