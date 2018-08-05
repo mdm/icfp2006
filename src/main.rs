@@ -73,11 +73,7 @@ fn run_program(program: Vec<u32>) {
     heap.push(Some(program));
 
     loop {
-        let program_array = &heap[0];
-        let next_platter = match program_array {
-            Some(raw_array) => &raw_array[finger],
-            None => panic!("Cannot read program from memory. Halting!"),
-        };
+        let next_platter = get_next_platter(&heap, finger);
         let operator = next_platter >> 28 as u32;
         let register_a: usize = ((next_platter >> 6) & 7 as u32) as usize;
         let register_b: usize = ((next_platter >> 3) & 7 as u32) as usize;
@@ -96,7 +92,7 @@ fn run_program(program: Vec<u32>) {
                 registers[register_a] = *source_platter;
             },
             2 => {
-                let destination_array = &heap[registers[register_a] as usize];
+                let destination_array = &mut heap[registers[register_a] as usize];
                 match destination_array {
                     Some(raw_array) => raw_array[registers[register_b] as usize] = registers[register_c],
                     None => panic!("Tried to write to invalid array. Halting!"),
@@ -110,7 +106,7 @@ fn run_program(program: Vec<u32>) {
             8 => {
                 match freelist.pop() {
                     Some(free_index) => {
-                        let new_array = Vec::new();
+                        let mut new_array = Vec::new();
                         for _ in 0..registers[register_c] {
                             new_array.push(0);
                         }
@@ -124,20 +120,16 @@ fn run_program(program: Vec<u32>) {
                 freelist.push(registers[register_c] as usize);
             },
             10 => {
-                std::io::stdout().write(&[registers[register_c] as u8]);
+                std::io::stdout().write(&[registers[register_c] as u8]).ok();
             },
             11 => {
-                let mut buffer: [u8; 1];
-                std::io::stdin().read(&mut buffer);
+                let mut buffer: [u8; 1] = [0];
+                std::io::stdin().read(&mut buffer).ok();
                 registers[register_c] = buffer[0] as u32;
             },
             12 => {
                 if registers[register_b] > 0 {
-                    let source_array = &heap[registers[register_b] as usize];
-                    heap[0] = match source_array {
-                        Some(raw_array) => Some(raw_array.clone()),
-                        None => panic!("Tried to copy invalid array. Halting!"),
-                    };
+                    heap[0] = clone_array(&heap, registers[register_b] as usize);
                 }
                 finger = registers[register_c] as usize;
             },
@@ -150,4 +142,18 @@ fn run_program(program: Vec<u32>) {
 
         finger += 1;
     }
+}
+
+fn get_next_platter(heap: &Vec<Option<Vec<u32>>>, finger: usize) -> u32 {
+    return match &heap[0] {
+        Some(raw_array) => raw_array[finger],
+        None => panic!("Cannot read program from memory. Halting!"),
+    };
+}
+
+fn clone_array(heap: &Vec<Option<Vec<u32>>>, array: usize) -> Option<Vec<u32>> {
+    return match &heap[array] {
+        Some(raw_array) => Some(raw_array.clone()),
+        None => panic!("Tried to copy invalid array. Halting!"),
+    };
 }
